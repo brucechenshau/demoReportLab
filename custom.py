@@ -199,7 +199,7 @@ class CustomLink(TableOfContents):
             for (level, text, pageNum, key, name) in _tempEntries:
                 style = styles.get("customLinkStyle")
                 if key:
-                    l.append(f"<a href=#{key}>{text}: {pageNum}</a>")
+                    l.append(f"{text}: <a href=#{key} color='blue'><u>{pageNum}</u></a>")
                     keyVal = repr(key).replace(',','\\x2c').replace('"','\\x2c')
                 else:
                     keyVal = None
