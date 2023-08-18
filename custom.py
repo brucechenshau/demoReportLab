@@ -131,8 +131,10 @@ class CustomLink(TableOfContents):
     for custom the dots purpose.
     '''
     def __init__(self, name: str, text: str, **kwds):
-        self._name=name
-        self._text=text
+        self._name: str = name
+        self._text: str = text
+        self._clsTable: Table = kwds.pop("table")
+        self._tableStyle: Table = kwds.pop("table_style")
         super().__init__(**kwds)
 
     def notify(self, kind, stuff):
@@ -140,6 +142,7 @@ class CustomLink(TableOfContents):
 
         Here we are interested in 'TOCEntry' events only.
         """
+        # print(kind, stuff, self._name)
         if kind == 'linkEntry' and self._name == stuff[-1]:
             self.addEntry(*stuff)
 
@@ -148,7 +151,6 @@ class CustomLink(TableOfContents):
 
         This allows incremental buildup by a doctemplate.
         Requires that enough styles are defined."""
-
         assert type(level) == type(1), "Level must be an integer"
         self._entries.append((level, text, pageNum, key, name ))
 
@@ -179,11 +181,10 @@ class CustomLink(TableOfContents):
 
         self.canv.drawTOCEntryEnd = drawTOCEntryEnd
 
-        
+        tableData = []
+        myTableData = []
         if _tempEntries[0][1] == "Placeholder for table of contents":
-            tableData = []
             for (level, text, pageNum, key) in _tempEntries:
-                # print(level, text, pageNum, key, name)
                 style = self.getLevelStyle(level)
                 if key:
                     text = '<a href="#%s">%s_page %s</a>' % (key, self._text, pageNum)
@@ -195,20 +196,54 @@ class CustomLink(TableOfContents):
                     tableData.append([Spacer(1, style.spaceBefore),])
                 tableData.append([para,])
         else:
-            l = []
             for (level, text, pageNum, key, name) in _tempEntries:
                 style = styles.get("customLinkStyle")
                 if key:
-                    l.append(f"{text}: <a href=#{key} color='blue'><u>{pageNum}</u></a>")
+                    text = f"{text}: <a href=#{key} color='blue'><u>{pageNum}</u></a>"
                     keyVal = repr(key).replace(',','\\x2c').replace('"','\\x2c')
                 else:
                     keyVal = None
-            text=f"{self._text} For {name}, please refer to page: " + ', '.join(l)
-            para = Paragraph('%s<onDraw name="drawTOCEntryEnd" label="%d,%d,%s"/>' % (text, pageNum, level, keyVal), style)    
+                # text=f"{self._text} For {name}, please refer to page: " + ', '.join(l)
+                para = Paragraph('%s<onDraw name="drawTOCEntryEnd" label="%d,%d,%s"/>' % (text, pageNum, level, keyVal), style) 
+                myTableData.append([para,])  
+        
+        if len(myTableData) > 0:
+            self._table = self._clsTable(
+                data=myTableData,
+                colWidths=(availWidth, ),
+                style=self._tableStyle
+            )
+            self.width, self.height = self._table.wrapOn(self.canv,availWidth, availHeight)
 
-        # self._table = Table(tableData, colWidths=(availWidth,), style=self.tableStyle)
-        self._table = Paragraph(text, style)
-
-        # self.width, self.height = self._table.wrapOn(self.canv,availWidth, availHeight)
-        self.width, self.height = self._table.wrapOn(self.canv,availWidth, availHeight)
+        else:
+            self.width, self.height = 0, 0
         return (self.width, self.height)
+
+    def drawOn(self, canvas, x, y, _sW=0):
+        """Don't do this at home!  The standard calls for implementing
+        draw(); we are hooking this in order to delegate ALL the drawing
+        work to the embedded table object.
+        """
+        if self._table is not None:
+            self._table.drawOn(canvas, x, y, _sW)
+
+class MyTable(Table):
+    def __init__(self, *args, **kwargs):
+        data = kwargs.pop("data") # this is the link
+        colWidths = kwargs.pop("colWidths")
+        data = self.modify_data(data)
+        colWidths = self.modify_colWidths(data, colWidths)
+        super().__init__(data, colWidths, *args, **kwargs)
+    
+    def modify_data(self, data):
+        data = [
+            ["", "before_anchor", ""],
+            ["", data[0], ""],
+            ["", "after_anchor", ""],
+        ]
+        return data
+    
+    def modify_colWidths(self, data, width):
+        col_count = len(data[0])
+        single_width = width[0] / col_count
+        return (single_width, ) * col_count

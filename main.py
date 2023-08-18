@@ -8,7 +8,7 @@ from reportlab.platypus.flowables import BalancedColumns
 import pathlib
 import uuid
 import hashlib
-from custom import CustomTOC, CustomLink, CustomParagraph
+from custom import CustomTOC, CustomLink, CustomParagraph, MyTable
 from style import styles
 import itertools
 
@@ -68,55 +68,18 @@ class Report(BaseDocTemplate):
         story.append(Paragraph('目錄', styles.get("titleTOC")))
         story.append(CustomTOC())
         story.append(PageBreak())
-        story.append(CustomLink(
-            name="gene1",
-            text="這是文字，"
-        ))
-        story.append(PageBreak())
-        story.append(CustomLink(
-            name="gene2",
-            text="這是文字，"
-        ))
-        story.append(PageBreak())
-        for i in range(3):
-            story.append(self.create_bookmark_paragraph(
-                text=f"標題{i}",
-                pstyle='subHeaderStyle',
-            ))
-            story.append(Spacer(1,2*cm))
-            story.append(
-                Table(
-                    data=[
-                        ['00', '01', '02', '03', '04'],
-                        ['10', '11', '12' if i != 0 else (
-                            self.create_bookmark_paragraph(
-                                text="drug1",
-                                pstyle='subHeaderStyle',
-                                name="gene1",
-                            )
-                        ), '13', '14'],
-                        ['20', '21', '22', '23', '24'],
-                        ['30', '31', '32', '33', '34']
-                    ],
-                    colWidths=self.availableWidth // 5,
-                    style=styles.get("tableStyle"),
-                )
+        story.append(
+            CustomLink(
+                name="gene1",
+                text="這是文字，",
+                table=MyTable,
+                table_style=styles.get("tableStyle")
             )
-            story.append(PageBreak())
+        )
+        story.append(PageBreak())
         
         for gene_name, drugs in {
-            "gene1": ["drug2", "drug3"]
-        }.items():
-            for drug in drugs:
-                story.append(self.create_bookmark_paragraph(
-                    text=drug,
-                    pstyle='subHeaderStyle',
-                    name=gene_name,
-                ))
-                story.append(PageBreak())
-
-        for gene_name, drugs in {
-            "gene2": ["drug4", "drug5", "drug6"]
+            "gene1": ["drug2",]
         }.items():
             for drug in drugs:
                 story.append(self.create_bookmark_paragraph(
